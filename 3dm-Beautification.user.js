@@ -8,9 +8,12 @@
 // @license      GPL-3.0 License
 // @run-at       document-start
 // @namespace    https://greasyfork.org/scripts/413593
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
 (function() {
+    'use strict';
     let style_Add = document.createElement('style');
     style_Add.innerHTML = `
 [url=home.php?mod=space&uid=945662]@media[/url] (min-width:1366px) {
@@ -95,6 +98,6 @@ textarea#fastpostmessage {
                 document.head.appendChild(style_Add);
                 clearInterval(timer);
             }
-        }, 1);
+        });
     }
 })();

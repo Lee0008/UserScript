@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         智友邦论坛增强
-// @version      1.1.8
+// @version      1.1.9
 // @author       X.I.U
 // @description  自动签到、自动回复、自动无缝翻页、回到顶部（右键点击两侧空白处）、清理置顶帖子、简化附件兑换/下载、清理帖子标题〖XXX〗【XXX】文字
 // @icon         http://bbs.zhiyoo.net/favicon.ico
@@ -16,9 +16,12 @@
 // @license      GPL-3.0 License
 // @run-at       document-end
 // @namespace    https://greasyfork.org/scripts/412362
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
 (function() {
+    'use strict';
     var menu_ALL = [
         ['menu_autoReply', '自动回复', '自动回复', true],
         ['menu_pageLoading', '自动无缝翻页', '自动无缝翻页', true],
@@ -42,22 +45,22 @@
         for (let i=0;i<menu_ALL.length;i++){ // 循环注册脚本菜单
             menu_ALL[i][3] = GM_getValue(menu_ALL[i][0]);
             if (menu_ALL[i][0] == 'menu_qianDaoRedirectURL') {
-                menu_ID[i] = GM_registerMenuCommand(`${menu_ALL[i][1]}`, function(){GM_setValue(`${menu_ALL[i][0]}`, location.href);GM_notification({text: `${menu_ALL[i][2]}`, timeout: 3000});})
+                menu_ID[i] = GM_registerMenuCommand(`#️⃣ ${menu_ALL[i][1]}`, function(){GM_setValue(`${menu_ALL[i][0]}`, location.href);GM_notification({text: `${menu_ALL[i][2]}`, timeout: 3000});})
             } else {
-                menu_ID[i] = GM_registerMenuCommand(`[ ${menu_ALL[i][3]?'√':'×'} ] ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
+                menu_ID[i] = GM_registerMenuCommand(`${menu_ALL[i][3]?'✅':'❌'} ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
             }
         }
-        menu_ID[menu_ID.length] = GM_registerMenuCommand('反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412362/feedback', {active: true,insert: true,setParent: true});});
+        menu_ID[menu_ID.length] = GM_registerMenuCommand('💬 反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412362/feedback', {active: true,insert: true,setParent: true});});
     }
 
     // 菜单开关
     function menu_switch(menu_status, Name, Tips) {
         if (menu_status == 'true'){
             GM_setValue(`${Name}`, false);
-            GM_notification({text: `已关闭 [${Tips}] 功能\n（刷新网页后生效）`, timeout: 3500});
+            GM_notification({text: `已关闭 [${Tips}] 功能\n（点击刷新网页后生效）`, timeout: 3500, onclick: function(){location.reload();}});
         }else{
             GM_setValue(`${Name}`, true);
-            GM_notification({text: `已开启 [${Tips}] 功能\n（刷新网页后生效）`, timeout: 3500});
+            GM_notification({text: `已开启 [${Tips}] 功能\n（点击刷新网页后生效）`, timeout: 3500, onclick: function(){location.reload();}});
         }
         registerMenuCommand(); // 重新注册脚本菜单
     };
@@ -101,7 +104,9 @@
 
     // 检查是否登陆
     var loginStatus = false;
-    checkLogin();
+    if (document.querySelector('.Quater_user.logined')){
+        loginStatus = true;
+    }
 
     // 默认 ID 为 0
     var curSite = {SiteTypeID: 0};
@@ -180,15 +185,6 @@
     }
 
 
-    // 判断是否登陆
-    function checkLogin(){
-        let checklogin = document.querySelector('.Quater_user.logined');
-        if (checklogin){
-            loginStatus = true;
-        }
-    }
-
-
     // 自动签到
     function qiandao(){
         if (loginStatus){
@@ -248,23 +244,6 @@
                     setTimeout(function(){window.scrollTo(0,document.querySelector('.showhide').offsetTop)}, 1000);
                 }
             }
-        }
-    }
-
-
-    // 自动无缝翻页
-    function pageLoading() {
-        if (!menu_value('menu_pageLoading')) return
-        if (curSite.SiteTypeID > 0){
-            windowScroll(function (direction, e) {
-                if (direction === "down") { //           下滑才准备翻页
-                    let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;
-                    let scrollDelta = 666;
-                    if (document.documentElement.scrollHeight <= document.documentElement.clientHeight + scrollTop + scrollDelta) {
-                        ShowPager.loadMorePage();
-                    }
-                }
-            });
         }
     }
 
@@ -337,58 +316,65 @@
     }
 
 
+    // 自动无缝翻页
+    function pageLoading() {
+        if (!menu_value('menu_pageLoading')) return
+        if (curSite.SiteTypeID > 0){
+            windowScroll(function (direction, e) {
+                if (direction === 'down') { //           下滑才准备翻页
+                    let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;
+                    let scrollDelta = 666;
+                    if (document.documentElement.scrollHeight <= document.documentElement.clientHeight + scrollTop + scrollDelta) {
+                        ShowPager.loadMorePage();
+                    }
+                }
+            });
+        }
+    }
+
+
     // 滚动条事件
     function windowScroll(fn1) {
         var beforeScrollTop = document.documentElement.scrollTop,
             fn = fn1 || function () {};
         setTimeout(function () { // 延时执行，避免刚载入到页面就触发翻页事件
-            window.addEventListener("scroll", function (e) {
+            window.addEventListener('scroll', function (e) {
                 var afterScrollTop = document.documentElement.scrollTop,
                     delta = afterScrollTop - beforeScrollTop;
                 if (delta == 0) return false;
-                fn(delta > 0 ? "down" : "up", e);
+                fn(delta > 0 ? 'down' : 'up', e);
                 beforeScrollTop = afterScrollTop;
             }, false);
         }, 1000)
     }
 
 
-    var ShowPager = { // 修改自 https://greasyfork.org/scripts/14178
+    // 修改自 https://greasyfork.org/scripts/14178 , https://github.com/machsix/Super-preloader
+    var ShowPager = {
         getFullHref: function (e) {
-            if(e == null) return '';
-            "string" != typeof e && (e = e.getAttribute("href"));
-            var t = this.getFullHref.a;
-            return t || (this.getFullHref.a = t = document.createElement("a")), t.href = e, t.href;
+            if (e != null && e.nodeType === 1 && e.href && e.href.slice(0,4) === 'http') return e.href;
+            return '';
         },
         createDocumentByString: function (e) {
             if (e) {
-                if ("HTML" !== document.documentElement.nodeName) return (new DOMParser).parseFromString(e, "application/xhtml+xml");
+                if ('HTML' !== document.documentElement.nodeName) return (new DOMParser).parseFromString(e, 'application/xhtml+xml');
                 var t;
-                try {
-                    t = (new DOMParser).parseFromString(e, "text/html");
-                } catch (e) {
-                }
+                try { t = (new DOMParser).parseFromString(e, 'text/html');} catch (e) {}
                 if (t) return t;
-                if (document.implementation.createHTMLDocument) t = document.implementation.createHTMLDocument("ADocument"); else try {
-                    (t = document.cloneNode(!1)).appendChild(t.importNode(document.documentElement, !1)),
-                        t.documentElement.appendChild(t.createElement("head")), t.documentElement.appendChild(t.createElement("body"));
-                } catch (e) {
+                if (document.implementation.createHTMLDocument) {
+                    t = document.implementation.createHTMLDocument('ADocument');
+                } else {
+                    try {((t = document.cloneNode(!1)).appendChild(t.importNode(document.documentElement, !1)), t.documentElement.appendChild(t.createElement('head')), t.documentElement.appendChild(t.createElement('body')));} catch (e) {}
                 }
                 if (t) {
-                    var r = document.createRange();
+                    var r = document.createRange(),
+                        n = r.createContextualFragment(e);
                     r.selectNodeContents(document.body);
-                    var n = r.createContextualFragment(e);
                     t.body.appendChild(n);
-                    for (var a, o = {
-                        TITLE: !0,
-                        META: !0,
-                        LINK: !0,
-                        STYLE: !0,
-                        BASE: !0
-                    }, i = t.body, s = i.childNodes, c = s.length - 1; c >= 0; c--) o[(a = s[c]).nodeName] && i.removeChild(a);
+                    for (var a, o = { TITLE: !0, META: !0, LINK: !0, STYLE: !0, BASE: !0}, i = t.body, s = i.childNodes, c = s.length - 1; c >= 0; c--) o[(a = s[c]).nodeName] && i.removeChild(a);
                     return t;
                 }
-            } else console.error("没有找到要转成DOM的字符串");
+            } else console.error('没有找到要转成 DOM 的字符串');
         },
         loadMorePage: function () {
             if (curSite.pager) {
@@ -439,57 +425,65 @@
             }
         },
     };
-
-
-    function getElementByXpath(e, t, r) {
-      r = r || document, t = t || r;
-      try {
-        return r.evaluate(e, t, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-      } catch (t) {
-        return void console.error("无效的xpath");
-      }
+    function getElementByCSS(css, contextNode = document) {
+        return contextNode.querySelector(css);
+    }
+    function getAllElementsByCSS(css, contextNode = document) {
+        return [].slice.call(contextNode.querySelectorAll(css));
+    }
+    function getElementByXpath(xpath, contextNode, doc = document) {
+        contextNode = contextNode || doc;
+        try {
+            const result = doc.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            // 应该总是返回一个元素节点
+            return result.singleNodeValue && result.singleNodeValue.nodeType === 1 && result.singleNodeValue;
+        } catch (err) {
+            throw new Error(`Invalid xpath: ${xpath}`);
+        }
+    }
+    function getAllElementsByXpath(xpath, contextNode, doc = document) {
+        contextNode = contextNode || doc;
+        const result = [];
+        try {
+            const query = doc.evaluate(xpath, contextNode, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            for (let i = 0; i < query.snapshotLength; i++) {
+                const node = query.snapshotItem(i);
+                // 如果是 Element 节点
+                if (node.nodeType === 1) result.push(node);
+            }
+        } catch (err) {
+            throw new Error(`无效 Xpath: ${xpath}`);
+        }
+        return result;
+    }
+    function getAllElements(selector, contextNode = undefined, doc = document, win = window, _cplink = undefined) {
+        if (!selector) return [];
+        contextNode = contextNode || doc;
+        if (typeof selector === 'string') {
+            if (selector.search(/^css;/i) === 0) {
+                return getAllElementsByCSS(selector.slice(4), contextNode);
+            } else {
+                return getAllElementsByXpath(selector, contextNode, doc);
+            }
+        } else {
+            const query = selector(doc, win, _cplink);
+            if (!Array.isArray(query)) {
+                throw new Error('getAllElements 返回错误类型');
+            } else {
+                return query;
+            }
+        }
     }
 
 
-    function getAllElements(e, t, r, n, o) {
-      let getAllElementsByXpath = function(e, t, r) {
-        return r = r || document, t = t || r, r.evaluate(e, t, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-      }
-
-      var i, s = [];
-      if (!e) return s;
-      if (r = r || document, n = n || window, o = o || void 0, t = t || r, "string" == typeof e) i = 0 === e.search(/^css;/i) ? function getAllElementsByCSS(e, t) {
-        return (t || document).querySelectorAll(e);
-      }(e.slice(4), t) : getAllElementsByXpath(e, t, r); else {
-        if (!(i = e(r, n, o))) return s;
-        if (i.nodeType) return s[0] = i, s;
-      }
-      return function makeArray(e) {
-        var t, r, n, o = [];
-        if (e.pop) {
-          for (t = 0, r = e.length; t < r; t++) (n = e[t]) && (n.nodeType ? o.push(n) : o = o.concat(makeArray(n)));
-          return a()(o);
+    // 获取GET参数
+    function getQueryVariable(variable) {
+        var query = window.location.search.substring(1);
+        var vars = query.split("&");
+        for (var i=0;i<vars.length;i++) {
+            var pair = vars[i].split("=");
+            if(pair[0] == variable){return pair[1];}
         }
-        if (e.item) {
-          for (t = e.length; t;) o[--t] = e[t];
-          return o;
-        }
-        if (e.iterateNext) {
-          for (t = e.snapshotLength; t;) o[--t] = e.snapshotItem(t);
-          return o;
-        }
-      }(i);
+        return(false);
     }
 })();
-
-// 获取GET参数
-function getQueryVariable(variable)
-{
-       var query = window.location.search.substring(1);
-       var vars = query.split("&");
-       for (var i=0;i<vars.length;i++) {
-               var pair = vars[i].split("=");
-               if(pair[0] == variable){return pair[1];}
-       }
-       return(false);
-}

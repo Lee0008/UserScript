@@ -15,8 +15,11 @@
 // @license      GPL-3.0 License
 // @run-at       document-start
 // @namespace    https://greasyfork.org/scripts/413721
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
+'use strict';
 (function() {
     var menu_streamline = GM_getValue('xiu2_menu_streamline');
     var menu_streamline_ID, menu_feedBack_ID;

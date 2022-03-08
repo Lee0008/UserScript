@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         知乎美化
-// @version      1.2.5
+// @version      1.4.8
 // @author       X.I.U
-// @description  宽屏显示、暗黑模式（4种）、隐藏文章开头大图、调整图片最大高度、向下翻时自动隐藏顶栏、文章编辑页面与实际文章宽度一致、屏蔽登录提示
+// @description  宽屏显示、暗黑模式（4种）、暗黑模式跟随浏览器、屏蔽首页活动广告、隐藏文章开头大图、调整图片最大高度、向下翻时自动隐藏顶栏
 // @match        *://www.zhihu.com/*
 // @match        *://zhuanlan.zhihu.com/*
 // @icon         https://static.zhihu.com/heifetz/favicon.ico
@@ -14,14 +14,26 @@
 // @grant        GM_notification
 // @license      GPL-3.0 License
 // @run-at       document-start
+// @incompatible safari
 // @namespace    https://greasyfork.org/scripts/412212
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
 (function() {
+    'use strict';
     var menu_ALL = [
-        ['menu_widescreenDisplay', '宽屏显示', '宽屏显示', true],
+        ['menu_widescreenDisplay', '宽屏显示', '勾选 = 该页面开启宽屏显示（刷新后查看效果）', ''],
+        ['menu_widescreenDisplayIndex', '首页', '宽屏显示', true],
+        ['menu_widescreenDisplayQuestion', '问题页', '宽屏显示', true],
+        ['menu_widescreenDisplaySearch', '搜索页、话题页、圈子', '宽屏显示', true],
+        ['menu_widescreenDisplayCollection', '收藏页', '宽屏显示', true],
+        ['menu_widescreenDisplayPost', '文章页', '宽屏显示', false],
+        ['menu_widescreenDisplayPeople', '用户主页', '用户主页', false],
+        ['menu_widescreenDisplayWidth', '宽屏宽度', '宽屏宽度 (默认 1000)', '1000'],
         ['menu_darkMode', '暗黑模式', '暗黑模式', true],
         ['menu_darkModeType', '暗黑模式切换（1~4）', '暗黑模式切换', 1],
+        ['menu_darkModeAuto', '暗黑模式跟随浏览器', '暗黑模式跟随浏览器', false],
         ['menu_picHeight', '调整图片最大高度', '调整图片最大高度', true],
         ['menu_postimg', '隐藏文章开头大图', '隐藏文章开头大图', true],
         ['menu_hideTitle', '向下翻时自动隐藏顶栏', '向下翻时自动隐藏顶栏', true]
@@ -46,12 +58,14 @@
                     menu_ALL[i][3] = 1;
                     GM_setValue('menu_darkModeType', menu_ALL[i][3]);
                 }
-                menu_ID[i] = GM_registerMenuCommand(`[ ${menu_ALL[i][3]} ] ${menu_ALL[i][1]}`, function(){menu_toggle(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`)});
-            } else {
-                menu_ID[i] = GM_registerMenuCommand(`[ ${menu_ALL[i][3]?'√':'×'} ] ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
+                menu_ID[i] = GM_registerMenuCommand(`${menu_num(menu_ALL[i][3])} ${menu_ALL[i][1]}`, function(){menu_toggle(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`)});
+            } else if (menu_ALL[i][0] === 'menu_widescreenDisplay'){
+                    GM_registerMenuCommand(`#️⃣ ${menu_ALL[i][1]}`, function(){menu_setting('checkbox', menu_ALL[i][1], menu_ALL[i][2], true, [menu_ALL[i+1], menu_ALL[i+2], menu_ALL[i+3], menu_ALL[i+4], menu_ALL[i+5], menu_ALL[i+6], menu_ALL[i+7]])});
+            } else if (menu_ALL[i][0].indexOf('menu_widescreenDisplay') === -1) {
+                menu_ID[i] = GM_registerMenuCommand(`${menu_ALL[i][3]?'✅':'❌'} ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
             }
         }
-        menu_ID[menu_ID.length] = GM_registerMenuCommand('反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412212/feedback', {active: true,insert: true,setParent: true});});
+        menu_ID[menu_ID.length] = GM_registerMenuCommand('💬 反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412212/feedback', {active: true,insert: true,setParent: true});});
     }
 
     // 切换暗黑模式
@@ -64,17 +78,20 @@
         }
         GM_setValue(`${Name}`, menu_status);
         if (menu_status === 1) { // 设置 Cookie
-            if (getTheme() === 'light') document.cookie="theme=dark; expires=Thu, 18 Dec 2031 12:00:00 GMT; path=/";
+            if (getTheme() === 'light') setTheme('dark');
         } else {
-            if (getTheme() === 'dark') document.cookie="theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-        }
-        if (menu_value('menu_darkMode')) {
-            location.reload(); // 刷新网页
-        } else {
-            GM_notification({text: `已切换暗黑模式为：方案 ${menu_status}\n`, timeout: 3500}); // 提示消息
-            registerMenuCommand(); // 重新注册脚本菜单
+            if (getTheme() === 'dark') {
+                setTheme('light');
+            } else {
+                if (menu_value('menu_darkMode')) {location.reload();} else {registerMenuCommand();}
+            }
         }
     };
+
+    // 菜单数字图标
+    function menu_num(num) {
+        return ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'][num]
+    }
 
     // 菜单开关
     function menu_switch(menu_status, Name, Tips) {
@@ -82,23 +99,21 @@
             GM_setValue(`${Name}`, false);
 
             if (Name === 'menu_darkMode') { // 暗黑模式
-                if (getTheme() === 'dark') document.cookie="theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-                location.reload(); // 刷新网页
+                if (getTheme() === 'dark') {setTheme('light');} else {location.reload();}
             } else {
-                GM_notification({text: `已关闭 [${Tips}] 功能\n（刷新网页后生效）`, timeout: 3500});
+                GM_notification({text: `已关闭 [${Tips}] 功能\n（点击刷新网页后生效）`, timeout: 3500, onclick: function(){location.reload();}});
             }
         } else {
             GM_setValue(`${Name}`, true);
 
             if (Name === 'menu_darkMode') {
                 if (menu_value('menu_darkModeType') === 1) {
-                    if (getTheme() === 'light') document.cookie="theme=dark; expires=Thu, 18 Dec 2031 12:00:00 GMT; path=/";
+                    if (getTheme() === 'light') setTheme('dark');
                 } else {
-                    if (getTheme() === 'dark') document.cookie="theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+                    if (getTheme() === 'dark') {setTheme('light');} else {location.reload();}
                 }
-                location.reload(); // 刷新网页
             } else {
-                GM_notification({text: `已开启 [${Tips}] 功能\n（刷新网页后生效）`, timeout: 3500});
+                GM_notification({text: `已开启 [${Tips}] 功能\n（点击刷新网页后生效）`, timeout: 3500, onclick: function(){location.reload();}});
             }
         }
         registerMenuCommand(); // 重新注册脚本菜单
@@ -114,50 +129,117 @@
     }
 
 
+    // 脚本设置
+    function menu_setting(type, title, tips, line, menu) {
+        let _br = '', _html = `<style class="zhihuE_SettingStyle">.zhihuE_SettingRoot {position: absolute;top: 50%;left: 50%;-webkit-transform: translate(-50%, -50%);-moz-transform: translate(-50%, -50%);-ms-transform: translate(-50%, -50%);-o-transform: translate(-50%, -50%);transform: translate(-50%, -50%);width: auto;min-width: 400px;max-width: 600px;height: auto;min-height: 150px;max-height: 400px;color: #535353;background-color: #fff;border-radius: 3px;}
+.zhihuE_SettingBackdrop_1 {position: fixed;top: 0;right: 0;bottom: 0;left: 0;z-index: 203;display: -webkit-box;display: -ms-flexbox;display: flex;-webkit-box-orient: vertical;-webkit-box-direction: normal;-ms-flex-direction: column;flex-direction: column;-webkit-box-pack: center;-ms-flex-pack: center;justify-content: center;overflow-x: hidden;overflow-y: auto;-webkit-transition: opacity .3s ease-out;transition: opacity .3s ease-out;}
+.zhihuE_SettingBackdrop_2 {position: absolute;top: 0;right: 0;bottom: 0;left: 0;z-index: 0;background-color: rgba(18,18,18,.65);-webkit-transition: background-color .3s ease-out;transition: background-color .3s ease-out;}
+.zhihuE_SettingRoot .zhihuE_SettingHeader {padding: 10px 20px;color: #fff;font-weight: bold;background-color: #3994ff;border-radius: 3px 3px 0 0;}
+.zhihuE_SettingRoot .zhihuE_SettingMain {padding: 10px 20px;border-radius: 0 0 3px 3px;}
+.zhihuE_SettingHeader span {float: right;cursor: pointer;}
+.zhihuE_SettingMain input {margin: 10px 6px 10px 0;cursor: pointer;vertical-align:middle}
+.zhihuE_SettingMain label {margin-right: 20px;user-select: none;cursor: pointer;vertical-align:middle}
+.zhihuE_SettingMain hr {border: 0.5px solid #f4f4f4;}
+[data-theme="dark"] .zhihuE_SettingRoot {color: #adbac7;background-color: #343A44;}
+[data-theme="dark"] .zhihuE_SettingHeader {color: #d0d0d0;background-color: #2D333B;}
+[data-theme="dark"] .zhihuE_SettingMain hr {border: 0.5px solid #2d333b;}</style>
+        <div class="zhihuE_SettingBackdrop_1"><div class="zhihuE_SettingBackdrop_2"></div><div class="zhihuE_SettingRoot">
+            <div class="zhihuE_SettingHeader">${title}<span class="zhihuE_SettingClose" title="点击关闭"><svg class="Zi Zi--Close Modal-closeIcon" fill="currentColor" viewBox="0 0 24 24" width="24" height="24"><path d="M13.486 12l5.208-5.207a1.048 1.048 0 0 0-.006-1.483 1.046 1.046 0 0 0-1.482-.005L12 10.514 6.793 5.305a1.048 1.048 0 0 0-1.483.005 1.046 1.046 0 0 0-.005 1.483L10.514 12l-5.208 5.207a1.048 1.048 0 0 0 .006 1.483 1.046 1.046 0 0 0 1.482.005L12 13.486l5.207 5.208a1.048 1.048 0 0 0 1.483-.006 1.046 1.046 0 0 0 .005-1.482L13.486 12z" fill-rule="evenodd"></path></svg></span></div>
+            <div class="zhihuE_SettingMain"><p>${tips}</p><hr>`
+        if (line) _br = '<br>'
+        for (let i=0; i<menu.length; i++) {
+            if (menu[i][0] === 'menu_widescreenDisplayWidth') {
+                _html += `<label>${menu[i][2]}：<input name="${menu[i][0]}" type="text" value="${GM_getValue(menu[i][0])}" style="width: 40px;"></label>${_br}`
+            } else if (GM_getValue(menu[i][0])) {
+                _html += `<label><input name="zhihuE_Setting_Checkbox" type="checkbox" value="${menu[i][0]}" checked="checked">${menu[i][1]}</label>${_br}`
+            } else {
+                _html += `<label><input name="zhihuE_Setting_Checkbox" type="checkbox" value="${menu[i][0]}">${menu[i][1]}</label>${_br}`
+            }
+        }
+        _html += `</div></div></div>`
+        document.body.insertAdjacentHTML('beforeend', _html); // 插入网页末尾
+        setTimeout(function() { // 延迟 100 毫秒，避免太快
+            // 关闭按钮 点击事件
+            document.querySelector('.zhihuE_SettingClose').onclick = function(){this.parentElement.parentElement.parentElement.remove();document.querySelector('.zhihuE_SettingStyle').remove();}
+            // 点击周围空白处 = 点击关闭按钮
+            document.querySelector('.zhihuE_SettingBackdrop_2').onclick = function(event){if (event.target == this) {document.querySelector('.zhihuE_SettingClose').click();};}
+            // 复选框 点击事件
+            document.getElementsByName('zhihuE_Setting_Checkbox').forEach(function (checkBox) {
+                checkBox.addEventListener('click', function(){if (this.checked) {GM_setValue(this.value, true);} else {GM_setValue(this.value, false);}});
+            })
+            document.getElementsByName('menu_widescreenDisplayWidth')[0].onchange = function(){GM_setValue(this.name, this.value);};
+        }, 100)
+    }
+
+
     // 添加样式
     function addStyle() {
-        let style = `/* 屏蔽登录提示 */
+        let style = `/* 屏蔽登录提示（问题页中间的元素） */
 .Question-mainColumnLogin {display: none !important;}
-/* 屏蔽首页广告 */
-.TopstoryItem--advertCard {display: none !important;}
 /* 屏蔽回答页广告 */
 .Pc-card.Card {display: none !important;}
 /* 屏蔽文章页推荐文章 */
 .Recommendations-Main {display: none !important;}
+/* 解除盐选内容选中复制限制 */
+div[class*="ManuscriptIntro-root-"] {user-select: auto !important;}
 `,
-            style_1 = `/* 宽屏显示 */
-.GlobalSideBar, .Question-sideColumn, .ContentLayout-sideColumn, .SearchSideBar, .Card.QuestionHeaderTopicMeta, .ClubSideBar {
-	display: none !important;
-}
-.Topstory-mainColumn, .Question-mainColumn, .ContentLayout-mainColumn,.SearchMain, .QuestionWaiting-mainColumn, .Club-mainColumn, .Post-mainColumn {
-	width: 1000px !important;
-}
-.QuestionWaiting-mainColumn {
-	margin-right: 0 !important;
-}
-.ImageMessage-ImageView {
-	z-index: 999 !important;
-}`,
+            style_index = `/* 屏蔽首页广告 */
+.TopstoryItem--advertCard {display: none !important;}
+/* 屏蔽首页活动广告 */
+main.App-main > .Topstory > div:not(.Topstory-container) {display: none !important;}
+html[data-theme="light"] header.AppHeader {background-color: #ffffff !important; -webkit-box-shadow: 0 1px 3px rgba(18,18,18,.1) !important; box-shadow: 0 1px 3px rgba(18,18,18,.1) !important;}
+html[data-theme="light"] header.AppHeader a[aria-label="知乎"] svg {filter: invert(57%) sepia(71%) saturate(949%) hue-rotate(190deg) brightness(86%) contrast(188%) !important;}
+html[data-theme="light"] .AppHeader-TabsLink {color: #8590a6 !important; font-weight: normal !important;}
+html[data-theme="light"] .AppHeader-userInfo Button svg, .SearchBar-searchButton svg {color: inherit !important;}
+html[data-theme="light"] .Input-wrapper.Input-wrapper--grey {background: #f6f6f6 !important;}
+html[data-theme="light"] .AppHeader-SearchBar input.Input {color: #121212 !important;}
+html[data-theme="light"] .AppHeader-SearchBar input::-webkit-input-placeholder {color: #a4a4a4 !important;}
+html[data-theme="light"] .AppHeader-SearchBar input:-moz-placeholder {color: #a4a4a4 !important;}
+html[data-theme="light"] .AppHeader-SearchBar input::-moz-placeholder {color: #a4a4a4 !important;}
+html[data-theme="light"] .Button--primary.Button--blue {color: #fff !important;background-color: #06f !important;}
+            `,
+            style_widescreenDisplayIndex = `/* 宽屏显示 - 首页 */
+.Topstory-mainColumn, .QuestionWaiting-mainColumn {width: inherit !important;}
+.GlobalSideBar {display: none !important;}
+.Topstory-container {width: ${GM_getValue('menu_widescreenDisplayWidth')}px;}
+`,
+            style_widescreenDisplayQuestion = `/* 宽屏显示 - 问题页 */
+.Question-mainColumn, .ListShortcut, .QuestionWaiting-mainColumn {width: inherit !important;}
+.Question-sideColumn, .GlobalSideBar {display: none !important;}
+.QuestionWaiting-mainColumn {margin-right: 0 !important;}
+.Question-main {width: ${GM_getValue('menu_widescreenDisplayWidth')}px;}
+`,
+            style_widescreenDisplaySearch = `/* 宽屏显示 - 搜索页 */
+.SearchMain, .ContentLayout-mainColumn, .Club-mainColumn, .Post-mainColumn {width: inherit !important;}
+.SearchSideBar, .ContentLayout-sideColumn, .Card.QuestionHeaderTopicMeta, .ClubSideBar {display: none !important;}
+.Search-container, .ContentLayout, .Club-container, .Post-container {width: ${GM_getValue('menu_widescreenDisplayWidth')}px;}
+`,
+            style_widescreenDisplayCollection = `/* 宽屏显示 - 收藏页 */
+.CollectionsDetailPage-mainColumn {width: inherit !important;}
+.CollectionDetailPageSideBar {display: none !important;}
+.CollectionsDetailPage {width: ${GM_getValue('menu_widescreenDisplayWidth')}px;}
+`,
+            style_widescreenDisplayPost = `/* 宽屏显示 - 文章页 */
+.Post-SideActions {left: calc(10vw) !important;}
+.Post-NormalMain .Post-Header, .Post-NormalMain>div, .Post-NormalSub>div {width: ${GM_getValue('menu_widescreenDisplayWidth')}px !important;}
+`,
+            style_widescreenDisplayPeople = `/* 宽屏显示 - 用户主页 */
+.Profile-mainColumn {width: inherit !important;}
+.Profile-sideColumn {display: none !important;}
+.Profile-main, #ProfileHeader {width: ${GM_getValue('menu_widescreenDisplayWidth')}px !important;}
+`,
             style_2 = `/* 隐藏在各列表中查看文章时开头显示的大图，不影响文章、专栏页面 */
 .RichContent img.ArticleItem-image {display: none !important;}
 `,
-            style_3 = `/* 调整文章编辑页面与实际文章宽度一致 */
-.PostEditor .RichText {min-width: 690px !important;}
-.InputLike.PostEditor.Editable {min-width: 710px !important;border: none !important;padding: 0 10px !important;background-color: #22272e !important;}
-/* 及标题输入框内的文字大小 */
-.WriteIndex-titleInput .Input {min-width: 690px !important;font-size: 24px;}
-label.WriteIndex-titleInput.Input-wrapper.Input-wrapper--multiline {min-width: 710px !important;padding: 0 10px !important;background-color: #22272e !important;}
-
-`,
-            style_4 = `/* 向下翻时自动隐藏顶栏*/
+            style_3 = `/* 向下翻时自动隐藏顶栏*/
 header.is-hidden {display: none;}
 `,
-            style_5 = `/* 调整图片最大高度 */
+            style_4 = `/* 调整图片最大高度 */
 .ztext .content_image, .ztext .origin_image, .GifPlayer img {max-height: 500px;width: auto;}
 `,
             style_darkMode_1 = `/* 暗黑模式（方案 1） */
 /* 文字颜色 */
-html[data-theme=dark] body, html[data-theme=dark] .ContentItem-title, html[data-theme=dark] .QuestionHeader-title, html[data-theme=dark] .Tabs-link, html[data-theme=dark] .CreatorEntrance-title, html[data-theme=dark] .Search-container, html[data-theme=dark] .HotItem-excerpt, html[data-theme=dark] .PushNotifications-item, html[data-theme=dark] .Notifications-Main>header h1, html[data-theme=dark] .Notifications-Section-header h2, html[data-theme=dark] .NotificationList-Item-content, html[data-theme=dark] .Reward, html[data-theme=dark] .ChatSideBar-Search-Input input, html[data-theme=dark] input.Input, html[data-theme=dark] .LinkCard-title, html[data-theme=dark] .MCNLinkCard-title, html[data-theme=dark] .ZVideoLinkCard-title, html[data-theme=dark] .TipjarDialog-customButton {color: #adbac7 !important;}
+html[data-theme=dark] body, html[data-theme=dark] .ContentItem-title, html[data-theme=dark] .QuestionHeader-title, html[data-theme=dark] .Tabs-link, html[data-theme=dark] .CreatorEntrance-title, html[data-theme=dark] .Search-container, html[data-theme=dark] .HotItem-excerpt, html[data-theme=dark] .PushNotifications-item, html[data-theme=dark] .Notifications-Main>header h1, html[data-theme=dark] .Notifications-Section-header h2, html[data-theme=dark] .NotificationList-Item-content, html[data-theme=dark] .Reward, html[data-theme=dark] .ChatSideBar-Search-Input input, html[data-theme=dark] input.Input, html[data-theme=dark] .LinkCard-title, html[data-theme=dark] .MCNLinkCard-title, html[data-theme=dark] .ZVideoLinkCard-title, html[data-theme=dark] .TipjarDialog-customButton, html[data-theme=dark] .Question-mainColumn .Card:not(.AnswersNavWrapper) a[data-za-detail-view-id] > div:last-child {color: #adbac7 !important;}
 html[data-theme=dark] .LinkCard-meta, html[data-theme=dark] .MCNLinkCard-source {color: #5a6f83 !important;}
 /* 热榜标题 */
 html[data-theme=dark] .HotItem-title {color: #c4cfda !important;}
@@ -169,8 +251,8 @@ html[data-theme=dark] .Highlight em {color: #c33c39 !important;}
 /* 背景颜色 - 网页 */
 html[data-theme=dark] body, html[data-theme=dark] .Select-option:focus {background: #22272E !important;}
 /* 背景颜色 - 问题 */
-html[data-theme=dark] .AppHeader, html[data-theme=dark] .QuestionHeader, html[data-theme=dark] .QuestionHeader-footer, html[data-theme=dark] .EmoticonsFooter-item--selected, html[data-theme=dark] .Card, html[data-theme=dark] .ContentItem-actions, html[data-theme=dark] .MoreAnswers .List-headerText, html[data-theme=dark] .CommentsV2-withPagination, html[data-theme=dark] .Topbar, html[data-theme=dark] .CommentsV2-footer, html[data-theme=dark] .CommentEditorV2-inputWrap--active, html[data-theme=dark] .InputLike, html[data-theme=dark] .Popover-content, html[data-theme=dark] .Notifications-footer, html[data-theme=dark] .Messages-footer, html[data-theme=dark] .Modal-inner, html[data-theme=dark] .Emoticons, html[data-theme=dark] .EmoticonsFooter, html[data-theme=dark] .SearchTabs, html[data-theme=dark] .Popover-arrow:after, html[data-theme=dark] .CommentEditorV2-inputWrap, html[data-theme=dark] .ProfileHeader-wrapper, html[data-theme=dark] .UserCover, html[data-theme=dark] .AnswerForm-footer, html[data-theme=dark] .Editable-toolbar, html[data-theme=dark] .AnswerForm-fullscreenContent .Editable-toolbar, html[data-theme=dark] .KfeCollection-PcCollegeCard-wrapper, html[data-theme=dark] .KfeCollection-PcCollegeCard-root, html[data-theme=dark] .HotItem, html[data-theme=dark] .HotList, html[data-theme=dark] .HotListNavEditPad, html[data-theme=dark] .QuestionWaiting-typesTopper, html[data-theme=dark] .QuestionWaiting-types, html[data-theme=dark] .PostItem, html[data-theme=dark] .ClubSideBar section, html[data-theme=dark] .SearchSubTabs, html[data-theme=dark] .Club-SearchPosts-Content, html[data-theme=dark] .Club-content, html[data-theme=dark] .ClubJoinOrCheckinButton, html[data-theme=dark] .ClubEdit, html[data-theme=dark] .CornerButton, html[data-theme=dark] .Notifications-Section-header, html[data-theme=dark] .NotificationList, .NotificationList-Item.NotificationList-Item:after, .NotificationList-DateSplit.NotificationList-DateSplit:after, html[data-theme=dark] .Chat, .ChatUserListItem:after, .ChatListGroup-SectionTitle--bottomBorder:after, html[data-theme=dark] .ActionMenu, .ChatSideBar-Search--active, html[data-theme=dark] .ChatSideBar-Search-ResultListWrap, html[data-theme=dark] .QuestionMainDivider-inner, html[data-theme=dark] .Topic-bar, html[data-theme=dark] .AnnotationTag, html[data-theme=dark] .HoverCard, html[data-theme=dark] .HoverCard-loading, html[data-theme=dark] .ExploreSpecialCard, html[data-theme=dark] .ExploreHomePage-ContentSection-moreButton a, html[data-theme=dark] .ExploreRoundtableCard, html[data-theme=dark] .ExploreCollectionCard, html[data-theme=dark] .ExploreColumnCard, html[data-theme=dark] .RichText .lazy[data-lazy-status] {background: #2D333B !important;}
-html[data-theme=dark] .CommentListV2-header-divider, html[data-theme=dark] .CommentsV2-openComment-divider, html[data-theme=dark] .AnswerForm-fullscreenScroller, html[data-theme=dark] .HotListNav-item, html[data-theme=dark] .AutoInviteItem-wrapper--desktop, html[data-theme=dark] .ExploreSpecialCard-contentTag, html[data-theme=dark] .ExploreCollectionCard-contentTypeTag, html[data-theme=dark] .Reward-TipjarDialog-tagLine {background-color: #222933 !important;}
+html[data-theme=dark] .AppHeader, html[data-theme=dark] .QuestionHeader, html[data-theme=dark] .QuestionHeader-footer, html[data-theme=dark] .EmoticonsFooter-item--selected, html[data-theme=dark] .Card, html[data-theme=dark] .Question-mainColumn .Card .Sticky.is-bottom, html[data-theme=dark] .ContentItem-actions, html[data-theme=dark] .MoreAnswers .List-headerText, html[data-theme=dark] .CommentsV2-withPagination, html[data-theme=dark] .Topbar, html[data-theme=dark] .CommentsV2-footer, html[data-theme=dark] .CommentEditorV2-inputWrap--active, html[data-theme=dark] .InputLike, html[data-theme=dark] .InputLike + div div, html[data-theme=dark] .Popover-content, html[data-theme=dark] .Notifications-footer, html[data-theme=dark] .Messages-footer, html[data-theme=dark] .Modal-inner, html[data-theme=dark] .Emoticons, html[data-theme=dark] .EmoticonsFooter, html[data-theme=dark] .SearchTabs, html[data-theme=dark] .Popover-arrow:after, html[data-theme=dark] .CommentEditorV2-inputWrap, html[data-theme=dark] .ProfileHeader-wrapper, html[data-theme=dark] .UserCover, html[data-theme=dark] .AnswerForm-footer, html[data-theme=dark] .Editable-toolbar, html[data-theme=dark] .AnswerForm-fullscreenContent .Editable-toolbar, html[data-theme=dark] .KfeCollection-PcCollegeCard-wrapper, html[data-theme=dark] .KfeCollection-PcCollegeCard-root, html[data-theme=dark] .HotItem, html[data-theme=dark] .HotList, html[data-theme=dark] .HotListNavEditPad, html[data-theme=dark] .QuestionWaiting-typesTopper, html[data-theme=dark] .QuestionWaiting-types, html[data-theme=dark] .PostItem, html[data-theme=dark] .ClubSideBar section, html[data-theme=dark] .SearchSubTabs, html[data-theme=dark] .Club-SearchPosts-Content, html[data-theme=dark] .Club-content, html[data-theme=dark] .ClubJoinOrCheckinButton, html[data-theme=dark] .ClubEdit, html[data-theme=dark] .CornerButton, html[data-theme=dark] .Notifications-Section-header, html[data-theme=dark] .NotificationList, .NotificationList-Item.NotificationList-Item:after, .NotificationList-DateSplit.NotificationList-DateSplit:after, html[data-theme=dark] .Chat, .ChatUserListItem:after, .ChatListGroup-SectionTitle--bottomBorder:after, html[data-theme=dark] .ActionMenu, .ChatSideBar-Search--active, html[data-theme=dark] .ChatSideBar-Search-ResultListWrap, html[data-theme=dark] .QuestionMainDivider-inner, html[data-theme=dark] .Topic-bar, html[data-theme=dark] .AnnotationTag, html[data-theme=dark] .HoverCard, html[data-theme=dark] .HoverCard-loading, html[data-theme=dark] .ExploreSpecialCard, html[data-theme=dark] .ExploreHomePage-ContentSection-moreButton a, html[data-theme=dark] .ExploreRoundtableCard, html[data-theme=dark] .ExploreCollectionCard, html[data-theme=dark] .ExploreColumnCard, html[data-theme=dark] .RichText .lazy[data-lazy-status], html[data-theme=dark] #TopstoryContent > div:first-child, html[data-theme=dark] .Topstory-newUserFollowCountPanel, html[data-theme=dark] .AnswerForm-fullscreenContent .RichText, html[data-theme=dark] .Club-Search-Content, html[data-theme=dark] .WriteIndexLayout .Sticky {background: #2D333B !important;}
+html[data-theme=dark] .CommentListV2-header-divider, html[data-theme=dark] .CommentsV2-openComment-divider, html[data-theme=dark] .AnswerForm-fullscreenScroller, html[data-theme=dark] .HotListNav-item, html[data-theme=dark] .AutoInviteItem-wrapper--desktop, html[data-theme=dark] .ExploreSpecialCard-contentTag, html[data-theme=dark] .ExploreCollectionCard-contentTypeTag, html[data-theme=dark] .Reward-TipjarDialog-tagLine, html[data-theme=dark] .AnswerForm-footer.useNewEditorSetting > div, html[data-theme=dark] .AnswerForm-fullscreenContent > div:first-child, html[data-theme=dark] .Editable-toolbar button:hover, html[data-theme=dark] .AuthorInfo.AnswerAdd-info + div {background-color: #222933 !important;}
 html[data-theme=dark] .CornerButton:hover {background: #3f4752 !important;} /* 右下角按钮 */
 
 /* 背景颜色 - 引用 */
@@ -219,10 +301,12 @@ html[data-theme=dark] img {opacity: 0.8 !important;}
 html[data-theme=dark] .GifPlayer img, html[data-theme=dark] .ImageView-img {opacity: 1 !important;}
 
 /* 边框 */
-html[data-theme=dark] .Topbar, html[data-theme=dark] .CommentsV2-footer, html[data-theme=dark] .Topstory-mainColumnCard .Card:not(.Topstory-tabCard), html[data-theme=dark] .NestComment:not(:last-child):after, html[data-theme=dark] .NestComment--rootComment:after, html[data-theme=dark] .NestComment .NestComment--child:after, html[data-theme=dark] .NestComment .NestComment--child:after, html[data-theme=dark] .CommentsV2-replyNum, html[data-theme=dark] .CommentItemV2:not(:first-child):after, html[data-theme=dark] .Tabs, html[data-theme=dark] .Popover-arrow:after {border-bottom: 1px solid #282d35 !important;}
-html[data-theme=dark] .CommentEditorV2-inputWrap--active, html[data-theme=dark] .CommentEditorV2-inputWrap, html[data-theme=dark] .PostItem {border: none !important;}
+html[data-theme=dark] .Topbar, html[data-theme=dark] .CommentsV2-footer, html[data-theme=dark] .Topstory-mainColumnCard .Card:not(.Topstory-tabCard), html[data-theme=dark] .NestComment:not(:last-child):after, html[data-theme=dark] .NestComment--rootComment:after, html[data-theme=dark] .NestComment .NestComment--child:after, html[data-theme=dark] .NestComment .NestComment--child:after, html[data-theme=dark] .CommentsV2-replyNum, html[data-theme=dark] .CommentItemV2:not(:first-child):after, html[data-theme=dark] .Tabs, html[data-theme=dark] .Popover-arrow:after, html[data-theme=dark] .SelfCollectionItem-innerContainer, html[data-theme=dark] .CollectionDetailPageItem-innerContainer {border-bottom: 1px solid #282d35 !important;}
+html[data-theme=dark] .CommentEditorV2-inputWrap--active, html[data-theme=dark] .CommentEditorV2-inputWrap, html[data-theme=dark] .PostItem, html[data-theme=dark] .AnswerForm .Editable-toolbar, html[data-theme=dark] .Editable-toolbar span {border: none !important;}
 html[data-theme=dark] .InputLike {border: 1px solid #424b56 !important;}
 html[data-theme=dark] .Popover .InputLike {border: 1px solid #2d333b !important;}
+html[data-theme=dark] .HotLanding-contentItem:not(:last-child) {border-bottom: 1px solid #424b56 !important;}
+html[data-theme=dark] .HotLanding-content {border-left: 2px solid #424b56 !important;}
 
 html[data-theme=dark] .Popover-content, html[data-theme=dark] .Popover-arrow:after {border: 1px solid #22272e !important;}
 
@@ -231,6 +315,10 @@ html[data-theme=dark] body::-webkit-scrollbar, html[data-theme="dark"] .Messages
 html[data-theme=dark] body::-webkit-scrollbar-thumb, html[data-theme="dark"] .MessagesBox::-webkit-scrollbar-thumb, html[data-theme="dark"] .Messages-list::-webkit-scrollbar-thumb, html[data-theme=dark] .PushNotifications-list::-webkit-scrollbar-thumb, html[data-theme=dark] .CommentListV2::-webkit-scrollbar-thumb, .ChatListGroup-SectionContent::-webkit-scrollbar-thumb, html[data-theme=dark] .ChatSideBar-Search-ResultListWrap::-webkit-scrollbar-thumb, html[data-theme=dark] .ChatBox textarea.Input::-webkit-scrollbar-thumb {background: #3f4752 !important;}
 html[data-theme=dark] body::-webkit-scrollbar-track {background: #22272e !important;}
 html[data-theme=dark] .MessagesBox::-webkit-scrollbar-track, html[data-theme="dark"] .Messages-list::-webkit-scrollbar-track, html[data-theme=dark] .PushNotifications-list::-webkit-scrollbar-track, html[data-theme=dark] .CommentListV2::-webkit-scrollbar-track, .ChatListGroup-SectionContent::-webkit-scrollbar-track, html[data-theme=dark] .ChatSideBar-Search-ResultListWrap::-webkit-scrollbar-track, html[data-theme=dark] .ChatBox textarea.Input::-webkit-scrollbar-track {background: #2d333b !important;}
+
+/* 滚动条 - 回答目录 */
+html[data-theme=dark] .AnswerItem .RichContent-hasCatalog .RichContent-inner .Catalog.isCatalogV2::-webkit-scrollbar {width: 0 !important;}
+html[data-theme=dark] .AnswerItem .RichContent-hasCatalog .RichContent-inner .Catalog.isCatalogV2 > :first-child {background: #2D333B !important;}
 
 html {scrollbar-width: thin; scrollbar-color: #3f4752 #22272e;}
 .MessagesBox, .Messages-list, .PushNotifications-list, .CommentListV2, .ChatListGroup-SectionContent, .ChatSideBar-Search-ResultListWrap {scrollbar-width: thin; scrollbar-color: #3f4752 #2D333B;}
@@ -249,133 +337,158 @@ html[data-theme=dark] .CommentItemV2--highlighted {-webkit-animation: nano !impo
 
 /* 赞赏 */
 html[data-theme=dark] .Reward-TipjarDialog-amountList .Button--red, html[data-theme=dark] .Reward-TipjarDialog-amountList .Button--red, html[data-theme=dark] .Reward-TipjarDialog-amountInput .SimpleInput {color: #d3d3d3 !important; background-color: #353b44 !important; border: none !important;}
+
+/* 赞同 */
+html[data-theme=dark] .VoteButton.is-active {color: #d6edff !important;}
 `,
+            style_darkMode_1_x = `/* 问题日志页 */
+html[data-theme=dark] .zu-top {background: #2D333B !important;border: none !important;}
+html[data-theme=dark] .zm-tag-editor-labels.zg-clear a {background: rgba(51,119,255,.1) !important;}
+html[data-theme=dark] .zu-main {background: #2D333B !important;padding-left: 20px;padding-right: 20px;}
+html[data-theme=dark] .zm-item+.zm-item {border-top: 1px solid #424b56;}
+html[data-theme=dark] a {color: #D4E5F4 !important;}
+html[data-theme=dark] ins, html[data-theme=dark] ins a {color: #009688 !important;}
+html[data-theme=dark] del a {color: #E91E63 !important;}
+html[data-theme=dark] div#zh-hovercard a {color: #353535 !important;}
+            `,
             style_darkMode_2 = `/* 暗黑模式（方案 2） */
-html {filter: invert(80%) !important;}
-img, .ZVideoItem-video, .ZVideo-video {filter: invert(1) !important;}
+html {filter: invert(90%) !important; text-shadow: 0 0 0 !important;}
+html[data-theme=light] body.ZVideo-body {background-color: #fff;}
+img, .ZVideoItem-video, .ZVideo-video, .VideoAnswerPlayer-video {filter: invert(1) !important;}
 .GifPlayer img, .GifPlayer.isPlaying video {filter: invert(1) !important;}
-.GifPlayer.isPlaying img.ztext-gif.GifPlayer-gif2mp4Image {filter: none !important;}
+.GifPlayer.isPlaying img.ztext-gif.GifPlayer-gif2mp4Image, img[alt="[公式]"] {filter: none !important;}
 `,
             style_darkMode_2_firefox = `/* 暗黑模式（方案 2） */
-html {filter: invert(80%) !important; background-image: url();}
-img, .ZVideoItem-video, .ZVideo-video {filter: invert(1) !important;}
+html {filter: invert(90%) !important; background-image: url(); text-shadow: 0 0 0 !important;}
+html[data-theme=light] body.ZVideo-body {background-color: #fff;}
+img, .ZVideoItem-video, .ZVideo-video, .VideoAnswerPlayer-video {filter: invert(1) !important;}
 .GifPlayer img, .GifPlayer.isPlaying video {filter: invert(1) !important;}
 .GifPlayer.isPlaying img.ztext-gif.GifPlayer-gif2mp4Image {filter: none !important;}
 `,
             style_darkMode_3 = `/* 暗黑模式（方案 3） */
-html {filter: brightness(75%) !important;}
+html {filter: brightness(70%) !important;}
 `,
             style_darkMode_3_firefox = `/* 暗黑模式（方案 3） */
-html {filter: brightness(75%) !important; background-image: url();}
+html {filter: brightness(70%) !important; background-image: url();}
 `,
             style_darkMode_4 = `/* 暗黑模式（方案 4） */
-html {filter: brightness(75%) sepia(30%) !important;}
+html {filter: brightness(65%) sepia(30%) !important;}
 `,
              style_darkMode_4_firefox = `/* 暗黑模式（方案 4） */
-html {filter: brightness(75%) sepia(30%) !important; background-image: url();}
+html {filter: brightness(65%) sepia(30%) !important; background-image: url();}
 `
         let style_Add = document.createElement('style');
 
-        // 暗黑模式
+
+
+        // 如果开启了 [暗黑模式]
         if (menu_value('menu_darkMode')) {
-            if (menu_value('menu_darkModeType') === 1) {
-                if (getTheme() === 'light') {
-                    document.cookie="theme=dark; expires=Thu, 18 Dec 2031 12:00:00 GMT; path=/";
-                    document.lastChild.setAttribute('data-theme', 'dark');
-                    location.reload(); // 刷新网页
+            // firefox 浏览器
+            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+                style_darkMode_2 = style_darkMode_2_firefox
+                style_darkMode_3 = style_darkMode_3_firefox
+                style_darkMode_4 = style_darkMode_4_firefox
+            }
+
+            // 如果开启了 [暗黑模式跟随浏览器] 且 当前浏览器是暗黑模式
+            if (menu_value('menu_darkModeAuto') && !window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                // 如果是暗黑模式，则需要改为白天模式
+                if (getTheme() === 'dark') {
+                    setTheme('light');
                 }
             } else {
-                if (getTheme() === 'dark') {
-                    document.cookie="theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-                    document.lastChild.setAttribute('data-theme', 'light');
-                    location.reload(); // 刷新网页
+                // 如果暗黑模式为 1
+                if (menu_value('menu_darkModeType') === 1) {
+                    // 如果当前知乎主题为白天模式，那就是改为暗黑模式
+                    if (getTheme() === 'light') {
+                        setTheme('dark');
+                    }
+                    // 如果是问题日志页，则改为暗黑模式
+                    if (location.pathname.indexOf('/log') > -1) {
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        style_darkMode_1 += style_darkMode_1_x;
+                    }
+                } else { // 如果是其他暗黑模式，则需要确保为白天模式
+                    if (getTheme() === 'dark') {
+                        setTheme('light');
+                    }
                 }
-                if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
-                    style_darkMode_2 = style_darkMode_2_firefox
-                    style_darkMode_3 = style_darkMode_3_firefox
-                    style_darkMode_4 = style_darkMode_4_firefox
+                switch(menu_value('menu_darkModeType')) {
+                    case 1:
+                        if (!(location.hostname.indexOf('zhuanlan') > -1 && (location.pathname.indexOf('/edit') > -1 || location.pathname.indexOf('/write') > -1))) style += style_darkMode_1;
+                        break;
+                    case 2:
+                        style += style_darkMode_2;
+                        break;
+                    case 3:
+                        style += style_darkMode_3;
+                        break;
+                    case 4:
+                        style += style_darkMode_4;
+                        break;
                 }
-            }
-            switch(menu_value('menu_darkModeType')) {
-                case 1:
-                    style += style_darkMode_1;
-                    break;
-                case 2:
-                    style += style_darkMode_2;
-                    break;
-                case 3:
-                    style += style_darkMode_3;
-                    break;
-                case 4:
-                    style += style_darkMode_4;
-                    break;
             }
         } else {
             if (getTheme() === 'dark'){
-                document.cookie="theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-                document.lastChild.setAttribute('data-theme', 'light');
-                location.reload(); // 刷新网页
+                setTheme('light');
             }
         }
+
+        if (location.pathname === '/' || location.pathname === '/hot' || location.pathname === '/follow') style += style_index;
+        if (menu_value('menu_darkModeType') === 1 && location.pathname.indexOf('/special/') > -1) style += style_darkMode_2 + 'video {filter: invert(1) !important;}';
 
         // 宽屏显示
-        if (menu_value('menu_widescreenDisplay')) {
-            style += style_1;
-        }
+        if (menu_value('menu_widescreenDisplayIndex')) style += style_widescreenDisplayIndex;
+        if (menu_value('menu_widescreenDisplayQuestion') && location.pathname.indexOf('/question/') > -1) style += style_widescreenDisplayQuestion;
+        if (menu_value('menu_widescreenDisplaySearch') && (location.pathname === '/search' || location.pathname.indexOf('/club/') > -1 || location.pathname.indexOf('/topic/') > -1)) style += style_widescreenDisplaySearch;
+        if (menu_value('menu_widescreenDisplayCollection') && location.pathname.indexOf('/collection/') > -1) style += style_widescreenDisplayCollection;
+        if (menu_value('menu_widescreenDisplayPost') && location.hostname.indexOf('zhuanlan') > -1 && (location.pathname.indexOf('/edit') === -1 || location.pathname.indexOf('/write') === -1)) style += style_widescreenDisplayPost;
+        if (menu_value('menu_widescreenDisplayPeople') && location.pathname.indexOf('/people/') > -1) style += style_widescreenDisplayPeople;
 
         // 调整图片最大高度
-        if (menu_value('menu_picHeight')) {
-            style += style_5;
-        }
-
+        if (menu_value('menu_picHeight')) style += style_4;
         // 隐藏文章开头大图
-        if (menu_value('menu_postimg')) {
-            style += style_2;
-        }
-
+        if (menu_value('menu_postimg')) style += style_2;
         // 向下翻时自动隐藏顶栏
-        if (menu_value('menu_hideTitle')) {
-            style += style_4;
-        }
-
-        // 文章编辑页面与实际文章宽度一致
-        if(window.location.href.indexOf("zhuanlan") > -1){
-            if(window.location.href.indexOf("/edit") > -1){
-                style += style_3;
-            }
-        }
-
-        /*style_Add.innerHTML = style;
-        if (document.head) {
-                document.head.appendChild(style_Add);
-        } else {
-            let timer = setInterval(function(){
-                if (document.head) {
-                    document.head.appendChild(style_Add);
-                    clearInterval(timer);
-                }
-            }, 1);
-        }*/
+        if (menu_value('menu_hideTitle')) style += style_3;
 
         if (document.lastChild) {
             document.lastChild.appendChild(style_Add).textContent = style;
         } else { // 避免网站加载速度太慢的备用措施
-            let timer1 = setInterval(function(){ // 每 5 毫秒检查一下 html 是否已存在
+            let timer1 = setInterval(function(){ // 每 10 毫秒检查一下 html 是否已存在
                 if (document.lastChild) {
                     clearInterval(timer1); // 取消定时器
                     document.lastChild.appendChild(style_Add).textContent = style;
                 }
-            }, 5);
+            });
         }
     }
+
+
+    // 获取知乎 Cookie 中的主题类型
     function getTheme() {
-        let name = "theme=";
-        let ca = document.cookie.split(';');
-        for(let i=0; i<ca.length; i++)
-        {
+        let name = 'theme=',
+            ca = document.cookie.split(';');
+        for (let i=0; i<ca.length; i++) {
             let c = ca[i].trim();
             if (c.indexOf(name)==0) return c.substring(name.length,c.length);
         }
-        return "light";
+        return 'light';
+    }
+
+    // 修改知乎 Cookie 中的主题类型
+    function setTheme(theme) {
+        switch(theme) {
+            case 'light':
+                document.cookie='theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+                document.lastChild.setAttribute('data-theme', 'light');
+                location.reload(); // 刷新网页
+                break;
+            case 'dark':
+                document.cookie='theme=dark; expires=Thu, 18 Dec 2031 12:00:00 GMT; path=/';
+                document.lastChild.setAttribute('data-theme', 'dark');
+                if (GM_getValue('menu_darkMode')) location.reload(); // 刷新网页
+                break;
+        }
     }
 })();

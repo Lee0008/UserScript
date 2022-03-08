@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         吾爱破解论坛增强 - 自动签到、翻页
-// @version      1.2.9
+// @version      1.3.6
 // @author       X.I.U
 // @description  自动签到、自动无缝翻页、屏蔽导读悬赏贴（最新发表页）
 // @match        *://www.52pojie.cn/*
@@ -15,9 +15,12 @@
 // @license      GPL-3.0 License
 // @run-at       document-end
 // @namespace    https://greasyfork.org/scripts/412680
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
 (function() {
+    'use strict';
     var menu_ALL = [
         ['menu_autoClockIn', '自动签到', '自动签到', true],
         ['menu_pageLoading', '自动无缝翻页', '自动无缝翻页', true],
@@ -38,19 +41,19 @@
         }
         for (let i=0;i<menu_ALL.length;i++) { // 循环注册脚本菜单
             menu_ALL[i][3] = GM_getValue(menu_ALL[i][0]);
-            menu_ID[i] = GM_registerMenuCommand(`[ ${menu_ALL[i][3]?'√':'×'} ] ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
+            menu_ID[i] = GM_registerMenuCommand(`${menu_ALL[i][3]?'✅':'❌'} ${menu_ALL[i][1]}`, function(){menu_switch(`${menu_ALL[i][3]}`,`${menu_ALL[i][0]}`,`${menu_ALL[i][2]}`)});
         }
-        menu_ID[menu_ID.length] = GM_registerMenuCommand('反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412680/feedback', {active: true,insert: true,setParent: true});});
+        menu_ID[menu_ID.length] = GM_registerMenuCommand('💬 反馈 & 建议', function () {window.GM_openInTab('https://github.com/XIU2/UserScript#xiu2userscript', {active: true,insert: true,setParent: true});window.GM_openInTab('https://greasyfork.org/zh-CN/scripts/412680/feedback', {active: true,insert: true,setParent: true});});
     }
 
     // 菜单开关
     function menu_switch(menu_status, Name, Tips) {
         if (menu_status == 'true') {
             GM_setValue(`${Name}`, false);
-            GM_notification({text: `已关闭 [${Tips}] 功能\n（刷新网页后生效）`, title: '吾爱破解论坛增强', timeout: 3000});
+            GM_notification({text: `已关闭 [${Tips}] 功能\n（点击刷新网页后生效）`, title: '吾爱破解论坛增强', timeout: 3000, onclick: function(){location.reload();}});
         } else {
             GM_setValue(`${Name}`, true);
-            GM_notification({text: `已开启 [${Tips}] 功能\n（刷新网页后生效）`, title: '吾爱破解论坛增强', timeout: 3000});
+            GM_notification({text: `已开启 [${Tips}] 功能\n（点击刷新网页后生效）`, title: '吾爱破解论坛增强', timeout: 3000, onclick: function(){location.reload();}});
         }
         registerMenuCommand(); // 重新注册脚本菜单
     };
@@ -87,48 +90,15 @@
             SiteTypeID: 2,
             pager: {
                 type: 1,
-                nextLink: '//div[@id="pgt"]//a[contains(text(),"下一页")][@href]',
+                nextLink: '//a[@class="nxt"][@href]',
                 pageElement: 'css;div#postlist > div[id^="post_"]',
                 HT_insert: ['css;div#postlist', 2],
-                replaceE: 'css;div.pg',
+                replaceE: 'css;#ct > .pgs',
                 scrollDelta: 766
-            }
-        },
-        guide: {
-            SiteTypeID: 3,
-            pager: {
-                type: 1,
-                nextLink: '//div[@id="pgt"]//a[contains(text(),"下一页")][@href]',
-                pageElement: 'css;div#threadlist div.bm_c table > tbody[id^="normalthread_"]',
-                HT_insert: ['css;div#threadlist div.bm_c table', 2],
-                replaceE: 'css;div.pg',
-                scrollDelta: 766
-            }
-        },
-        collection: {
-            SiteTypeID: 4,
-            pager: {
-                type: 1,
-                nextLink: '//div[@class="pg"]//a[contains(text(),"下一页")][@href]',
-                pageElement: 'css;div#ct div.bm_c table > tbody',
-                HT_insert: ['css;div#ct div.bm_c table', 2],
-                replaceE: 'css;div.pg',
-                scrollDelta: 899
-            }
-        },
-        favorite: {
-            SiteTypeID: 5,
-            pager: {
-                type: 1,
-                nextLink: '//a[@class="nxt"][@href]',
-                pageElement: 'css;ul#favorite_ul > li',
-                HT_insert: ['css;ul#favorite_ul', 2],
-                replaceE: 'css;div.pg',
-                scrollDelta: 899
             }
         },
         search: {
-            SiteTypeID: 6,
+            SiteTypeID: 3,
             pager: {
                 type: 1,
                 nextLink: '//a[@class="nxt"][@href]',
@@ -137,13 +107,56 @@
                 replaceE: 'css;div.pg',
                 scrollDelta: 766
             }
+        },
+        guide: {
+            SiteTypeID: 4,
+            pager: {
+                type: 1,
+                nextLink: '//a[@class="nxt"][@href]',
+                pageElement: 'css;div#threadlist div.bm_c table > tbody',
+                HT_insert: ['css;div#threadlist div.bm_c table', 2],
+                replaceE: 'css;div.pg',
+                scrollDelta: 766
+            }
+        },
+        youspace: {
+            SiteTypeID: 5,
+            pager: {
+                type: 1,
+                nextLink: '//a[@class="nxt"][@href]',
+                pageElement: 'css;tbody > tr:not(.th)',
+                HT_insert: ['css;tbody', 2],
+                replaceE: 'css;div.pg',
+                scrollDelta: 1000
+            }
+        },
+        collection: {
+            SiteTypeID: 6,
+            pager: {
+                type: 1,
+                nextLink: '//a[@class="nxt"][@href]',
+                pageElement: 'css;div#ct div.bm_c table > tbody',
+                HT_insert: ['css;div#ct div.bm_c table', 2],
+                replaceE: 'css;div.pg',
+                scrollDelta: 899
+            }
+        },
+        favorite: {
+            SiteTypeID: 7,
+            pager: {
+                type: 1,
+                nextLink: '//a[@class="nxt"][@href]',
+                pageElement: 'css;ul#favorite_ul > li',
+                HT_insert: ['css;ul#favorite_ul', 2],
+                replaceE: 'css;div.pg',
+                scrollDelta: 899
+            }
         }
     };
 
     // URL 匹配正则表达式
     let patt_thread = /\/thread-\d+-\d+\-\d+.html/,
-        patt_forum = /\/forum-\d+-\d+\.html/,
-        patt_guide = /mod\=guide\&view\=(hot|digest|new|newthread|my|tech|help)/
+        patt_forum = /\/forum-\d+-\d+\.html/
 
     // URL 判断
     if (patt_thread.test(location.pathname) || location.search.indexOf('mod=viewthread') > -1) {
@@ -153,7 +166,7 @@
         }
     } else if (patt_forum.test(location.pathname) || location.search.indexOf('mod=forumdisplay') > -1) {
         curSite = DBSite.forum; //           各板块帖子列表
-    } else if (patt_guide.test(location.search)) {
+    } else if (location.search.indexOf('mod=guide') > -1) {
         curSite = DBSite.guide; //           导读帖子列表
         delateReward(); //                   屏蔽导读悬赏贴（最新发表）
     } else if (location.search.indexOf('mod=collection') > -1) {
@@ -162,57 +175,27 @@
         curSite = DBSite.favorite; //        收藏列表
     } else if (location.pathname === '/search.php') {
         curSite = DBSite.search; //          搜索结果列表
+    } else if(location.search.indexOf('mod=space') > -1 && location.search.indexOf('&view=me') > -1) { // 别人的主题/回复
+        curSite = DBSite.youspace;
     }
-    curSite.pageUrl = ""; // 下一页URL
+    curSite.pageUrl = ''; // 下一页URL
 
     qianDao(); // 自动签到
     pageLoading(); // 自动翻页
 
 
-    // 自动翻页
-    function pageLoading() {
-        if (!menu_value('menu_pageLoading')) return
-        if (curSite.SiteTypeID > 0) {
-            windowScroll(function (direction, e) {
-                if (direction === "down") { // 下滑才准备翻页
-                    let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;
-                    let scrollDelta = curSite.pager.scrollDelta;
-                    if (document.documentElement.scrollHeight <= document.documentElement.clientHeight + scrollTop + scrollDelta) {
-                        if (curSite.pager.type === 1) {
-                            ShowPager.loadMorePage();
-                        } else {
-                            let autopbn = document.querySelector(curSite.pager.nextLink);
-                            if (autopbn && autopbn.innerText == curSite.pager.nextText) { // 如果正在加载，就不再点击
-                                autopbn.click();
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-
     // 自动签到（后台）
     function qianDao() {
         if (!menu_value('menu_autoClockIn')) return
-        let qiandao = document.querySelector('#um a[href="home.php?mod=task&do=apply&id=2"]');
+        if (location.pathname === '/home.php' && location.search.indexOf('mod=task') > -1) {return;}
+        let qiandao = document.querySelector('#um a[href^="home.php?mod=task&do=apply&id=2"]');
         if (qiandao) {
-            GM_xmlhttpRequest({
-                url: qiandao.href,
-                method: "GET",
-                timeout: 5000,
-                onload: function (response) {
-                    let html = ShowPager.createDocumentByString(response.responseText);
-                    html = html.querySelector('#messagetext p')
-                    if (html && html.innerText.indexOf('任务已完成') > -1 || html && html.innerText.indexOf('已申请过此任务') > -1) {
-                        qiandao.querySelector('.qq_bind').setAttribute('src','https://www.52pojie.cn/static/image/common/wbs.png') // 修改 [打卡签到] 图标为 [签到完毕]
-                        qiandao.href = "#" // 修改 URL 为 #
-                    } else {
-                        GM_notification({text: '自动签到失败！请联系作者解决！', title: '吾爱破解论坛增强', timeout: 3000});
-                    }
-                }
-            });
+            let iframe = document.createElement('iframe'); // XHR 方式无法签到，改用 iframe 框架打开签到网页
+            document.lastElementChild.appendChild(iframe);
+            iframe.style = 'display: none;';
+            iframe.src = qiandao.href;
+            qiandao.querySelector('.qq_bind').src = 'https://www.52pojie.cn/static/image/common/wbs.png'; // 修改 [打卡签到] 图标为 [签到完毕] 图标
+            qiandao.href = 'javascript:void(0);'
         }
     }
 
@@ -238,9 +221,31 @@
 
     // 隐藏帖子内的 [下一页] 按钮
     function hidePgbtn() {
-        let style_hidePgbtn = document.createElement('style');
-        style_hidePgbtn.innerHTML = `.pgbtn {display: none;}`;
-        document.head.appendChild(style_hidePgbtn);
+        document.lastChild.appendChild(document.createElement('style')).textContent = '.pgbtn {display: none;}';
+    }
+
+
+    // 自动翻页
+    function pageLoading() {
+        if (!menu_value('menu_pageLoading')) return
+        if (curSite.SiteTypeID > 0) {
+            windowScroll(function (direction, e) {
+                if (direction === "down") { // 下滑才准备翻页
+                    let scrollTop = document.documentElement.scrollTop || window.pageYOffset || document.body.scrollTop;
+                    let scrollDelta = curSite.pager.scrollDelta;
+                    if (document.documentElement.scrollHeight <= document.documentElement.clientHeight + scrollTop + scrollDelta) {
+                        if (curSite.pager.type === 1) {
+                            ShowPager.loadMorePage();
+                        } else {
+                            let autopbn = document.querySelector(curSite.pager.nextLink);
+                            if (autopbn && autopbn.textContent == curSite.pager.nextText) { // 如果正在加载，就不再点击
+                                autopbn.click();
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
 
@@ -249,55 +254,44 @@
         var beforeScrollTop = document.documentElement.scrollTop,
             fn = fn1 || function () {};
         setTimeout(function () { // 延时执行，避免刚载入到页面就触发翻页事件
-            window.addEventListener("scroll", function (e) {
+            window.addEventListener('scroll', function (e) {
                 var afterScrollTop = document.documentElement.scrollTop,
                     delta = afterScrollTop - beforeScrollTop;
                 if (delta == 0) return false;
-                fn(delta > 0 ? "down" : "up", e);
+                fn(delta > 0 ? 'down' : 'up', e);
                 beforeScrollTop = afterScrollTop;
             }, false);
         }, 1000)
     }
 
 
-    // 自动无缝翻页，修改自 https://greasyfork.org/scripts/14178
+    // 修改自 https://greasyfork.org/scripts/14178 , https://github.com/machsix/Super-preloader
     function showPager() {
         ShowPager = {
             getFullHref: function (e) {
-                if(e == null) return '';
-                "string" != typeof e && (e = e.getAttribute("href"));
-                var t = this.getFullHref.a;
-                return t || (this.getFullHref.a = t = document.createElement("a")), t.href = e, t.href;
+                if (e != null && e.nodeType === 1 && e.href && e.href.slice(0,4) === 'http') return e.href;
+                return '';
             },
             createDocumentByString: function (e) {
                 if (e) {
-                    if ("HTML" !== document.documentElement.nodeName) return (new DOMParser).parseFromString(e, "application/xhtml+xml");
+                    if ('HTML' !== document.documentElement.nodeName) return (new DOMParser).parseFromString(e, 'application/xhtml+xml');
                     var t;
-                    try {
-                        t = (new DOMParser).parseFromString(e, "text/html");
-                    } catch (e) {
-                    }
+                    try { t = (new DOMParser).parseFromString(e, 'text/html');} catch (e) {}
                     if (t) return t;
-                    if (document.implementation.createHTMLDocument) t = document.implementation.createHTMLDocument("ADocument"); else try {
-                        (t = document.cloneNode(!1)).appendChild(t.importNode(document.documentElement, !1)),
-                            t.documentElement.appendChild(t.createElement("head")), t.documentElement.appendChild(t.createElement("body"));
-                    } catch (e) {
+                    if (document.implementation.createHTMLDocument) {
+                        t = document.implementation.createHTMLDocument('ADocument');
+                    } else {
+                        try {((t = document.cloneNode(!1)).appendChild(t.importNode(document.documentElement, !1)), t.documentElement.appendChild(t.createElement('head')), t.documentElement.appendChild(t.createElement('body')));} catch (e) {}
                     }
                     if (t) {
-                        var r = document.createRange();
+                        var r = document.createRange(),
+                            n = r.createContextualFragment(e);
                         r.selectNodeContents(document.body);
-                        var n = r.createContextualFragment(e);
                         t.body.appendChild(n);
-                        for (var a, o = {
-                            TITLE: !0,
-                            META: !0,
-                            LINK: !0,
-                            STYLE: !0,
-                            BASE: !0
-                        }, i = t.body, s = i.childNodes, c = s.length - 1; c >= 0; c--) o[(a = s[c]).nodeName] && i.removeChild(a);
+                        for (var a, o = { TITLE: !0, META: !0, LINK: !0, STYLE: !0, BASE: !0}, i = t.body, s = i.childNodes, c = s.length - 1; c >= 0; c--) o[(a = s[c]).nodeName] && i.removeChild(a);
                         return t;
                     }
-                } else console.error("没有找到要转成DOM的字符串");
+                } else console.error('没有找到要转成 DOM 的字符串');
             },
             loadMorePage: function () {
                 if (curSite.pager) {
@@ -349,45 +343,53 @@
             },
         };
     }
-
-
-    function getElementByXpath(e, t, r) {
-      r = r || document, t = t || r;
-      try {
-        return r.evaluate(e, t, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-      } catch (t) {
-        return void console.error("无效的xpath");
-      }
+    function getElementByCSS(css, contextNode = document) {
+        return contextNode.querySelector(css);
     }
-
-
-    function getAllElements(e, t, r, n, o) {
-      let getAllElementsByXpath = function(e, t, r) {
-        return r = r || document, t = t || r, r.evaluate(e, t, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-      }
-
-      var i, s = [];
-      if (!e) return s;
-      if (r = r || document, n = n || window, o = o || void 0, t = t || r, "string" == typeof e) i = 0 === e.search(/^css;/i) ? function getAllElementsByCSS(e, t) {
-        return (t || document).querySelectorAll(e);
-      }(e.slice(4), t) : getAllElementsByXpath(e, t, r); else {
-        if (!(i = e(r, n, o))) return s;
-        if (i.nodeType) return s[0] = i, s;
-      }
-      return function makeArray(e) {
-        var t, r, n, o = [];
-        if (e.pop) {
-          for (t = 0, r = e.length; t < r; t++) (n = e[t]) && (n.nodeType ? o.push(n) : o = o.concat(makeArray(n)));
-          return a()(o);
+    function getAllElementsByCSS(css, contextNode = document) {
+        return [].slice.call(contextNode.querySelectorAll(css));
+    }
+    function getElementByXpath(xpath, contextNode, doc = document) {
+        contextNode = contextNode || doc;
+        try {
+            const result = doc.evaluate(xpath, contextNode, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            // 应该总是返回一个元素节点
+            return result.singleNodeValue && result.singleNodeValue.nodeType === 1 && result.singleNodeValue;
+        } catch (err) {
+            throw new Error(`Invalid xpath: ${xpath}`);
         }
-        if (e.item) {
-          for (t = e.length; t;) o[--t] = e[t];
-          return o;
+    }
+    function getAllElementsByXpath(xpath, contextNode, doc = document) {
+        contextNode = contextNode || doc;
+        const result = [];
+        try {
+            const query = doc.evaluate(xpath, contextNode, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            for (let i = 0; i < query.snapshotLength; i++) {
+                const node = query.snapshotItem(i);
+                // 如果是 Element 节点
+                if (node.nodeType === 1) result.push(node);
+            }
+        } catch (err) {
+            throw new Error(`无效 Xpath: ${xpath}`);
         }
-        if (e.iterateNext) {
-          for (t = e.snapshotLength; t;) o[--t] = e.snapshotItem(t);
-          return o;
+        return result;
+    }
+    function getAllElements(selector, contextNode = undefined, doc = document, win = window, _cplink = undefined) {
+        if (!selector) return [];
+        contextNode = contextNode || doc;
+        if (typeof selector === 'string') {
+            if (selector.search(/^css;/i) === 0) {
+                return getAllElementsByCSS(selector.slice(4), contextNode);
+            } else {
+                return getAllElementsByXpath(selector, contextNode, doc);
+            }
+        } else {
+            const query = selector(doc, win, _cplink);
+            if (!Array.isArray(query)) {
+                throw new Error('getAllElements 返回错误类型');
+            } else {
+                return query;
+            }
         }
-      }(i);
     }
 })();

@@ -8,8 +8,11 @@
 // @license      GPL-3.0 License
 // @run-at       document-start
 // @namespace    https://greasyfork.org/scripts/412361
+// @supportURL   https://github.com/XIU2/UserScript
+// @homepageURL  https://github.com/XIU2/UserScript
 // ==/UserScript==
 
+'use strict';
 (function() {
     let style_Add = document.createElement('style');
     style_Add.innerHTML = `
